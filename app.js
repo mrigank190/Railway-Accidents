@@ -1,3 +1,10 @@
+const CATEGORY_META = {
+  rail:   { label: "Railway",            color: "#16324F" },
+  air:    { label: "Aviation",           color: "#1F6F78" },
+  terror: { label: "Terrorism",          color: "#8B1E2B" },
+  naxal:  { label: "Naxalite / Maoist",  color: "#6B5B1E" },
+};
+
 const CAUSE_COLORS = {
   collision: "#B23A2E",
   derailment: "#C98A2C",
@@ -5,6 +12,13 @@ const CAUSE_COLORS = {
   fire: "#8a3b1f",
   levelCrossing: "#3F6B4C",
   sabotage: "#4a3a5c",
+  crash: "#7A5C3E",
+  hijack: "#A6742C",
+  bombing: "#7A1F2B",
+  shooting: "#5A2020",
+  hostage: "#5A3E7A",
+  ambush: "#2F4F3F",
+  ied: "#A0522D",
   other: "#6b6455",
 };
 const CAUSE_LABELS = {
@@ -13,11 +27,19 @@ const CAUSE_LABELS = {
   bridge: "Bridge / flood",
   fire: "Fire",
   levelCrossing: "Level crossing",
-  sabotage: "Sabotage / bombing",
+  sabotage: "Sabotage",
+  crash: "Crash",
+  hijack: "Hijacking",
+  bombing: "Bombing",
+  shooting: "Shooting",
+  hostage: "Hostage siege",
+  ambush: "Ambush",
+  ied: "IED blast",
   other: "Other",
 };
 
 let activeCauses = new Set(Object.keys(CAUSE_COLORS));
+let activeCategories = new Set(Object.keys(CATEGORY_META));
 let yearMin = 1902, yearMax = 2025;
 let sortKey = "date", sortDir = -1;
 let searchQuery = "";
@@ -33,6 +55,7 @@ function filtered(){
   const q = searchQuery.trim().toLowerCase();
   return INCIDENTS.filter(d =>
     activeCauses.has(d.cause) &&
+    activeCategories.has(d.category) &&
     yearOf(d) >= yearMin && yearOf(d) <= yearMax &&
     matchesSearch(d, q)
   );
@@ -43,19 +66,17 @@ function renderBoard(){
   const data = INCIDENTS;
   const totalDeaths = data.reduce((s,d)=>s+d.deaths,0);
   const deadliest = data.reduce((a,b)=> b.deaths>a.deaths?b:a);
-  const byDecadeCount = {};
-  data.forEach(d=>{
-    const dec = Math.floor(yearOf(d)/10)*10;
-    byDecadeCount[dec] = (byDecadeCount[dec]||0)+1;
-  });
-  const worstDecade = Object.entries(byDecadeCount).sort((a,b)=>b[1]-a[1])[0];
+  const byCat = {};
+  Object.keys(CATEGORY_META).forEach(c=>byCat[c]=0);
+  data.forEach(d=>byCat[d.category]++);
+  const catSummary = Object.entries(byCat).map(([c,n])=>`${n} ${CATEGORY_META[c].label.split(" ")[0]}`).join(" · ");
 
   const cells = [
     ["Incidents tracked", data.length],
     ["Total lives lost", totalDeaths.toLocaleString()],
     ["Deadliest incident", deadliest.deaths + " · " + deadliest.name],
     ["Span of record", "1902 – 2025"],
-    ["Most incidents / decade", worstDecade[0] + "s (" + worstDecade[1] + ")"],
+    ["By category", catSummary],
   ];
   const board = document.getElementById("board");
   board.innerHTML = cells.map(([label,val],i)=>`
@@ -65,6 +86,33 @@ function renderBoard(){
     </div>`).join("");
 }
 
+// ---------- Category filter ----------
+function renderCategoryChips(){
+  const box = document.getElementById("categoryFilters");
+  box.innerHTML = Object.entries(CATEGORY_META).map(([c,meta])=>
+    `<button class="chip cat-chip active" data-category="${c}" style="border-color:${meta.color}">${meta.label}</button>`
+  ).join("");
+  box.querySelectorAll(".cat-chip").forEach(chip=>{
+    const c = chip.dataset.category;
+    chip.style.background = CATEGORY_META[c].color;
+    chip.style.color = "#fff";
+    chip.addEventListener("click", ()=>{
+      if(activeCategories.has(c)){
+        activeCategories.delete(c);
+        chip.classList.remove("active");
+        chip.style.background = "transparent";
+        chip.style.color = "var(--ink)";
+      } else {
+        activeCategories.add(c);
+        chip.classList.add("active");
+        chip.style.background = CATEGORY_META[c].color;
+        chip.style.color = "#fff";
+      }
+      refreshAll();
+    });
+  });
+}
+
 // ---------- Filters ----------
 function renderFilterChips(){
   const box = document.getElementById("causeFilters");
@@ -72,18 +120,30 @@ function renderFilterChips(){
     `<button class="chip active" data-cause="${c}">${CAUSE_LABELS[c]}</button>`
   ).join("");
   box.querySelectorAll(".chip").forEach(chip=>{
+    const c = chip.dataset.cause;
+    chip.style.borderColor = CAUSE_COLORS[c];
+    chip.style.background = CAUSE_COLORS[c];
+    chip.style.color = "#fff";
     chip.addEventListener("click", ()=>{
-      const c = chip.dataset.cause;
-      if(activeCauses.has(c)){ activeCauses.delete(c); chip.classList.remove("active"); }
-      else { activeCauses.add(c); chip.classList.add("active"); }
+      if(activeCauses.has(c)){
+        activeCauses.delete(c);
+        chip.classList.remove("active");
+        chip.style.background = "transparent";
+        chip.style.color = "var(--ink)";
+      } else {
+        activeCauses.add(c);
+        chip.classList.add("active");
+        chip.style.background = CAUSE_COLORS[c];
+        chip.style.color = "#fff";
+      }
       refreshAll();
     });
   });
 }
 
 function renderLegend(){
-  document.getElementById("legend").innerHTML = Object.entries(CAUSE_COLORS).map(([c,col])=>
-    `<span><span class="dot" style="background:${col}"></span>${CAUSE_LABELS[c]}</span>`
+  document.getElementById("legend").innerHTML = Object.entries(CATEGORY_META).map(([c,meta])=>
+    `<span><span class="dot" style="background:${meta.color}"></span>${meta.label}</span>`
   ).join("");
 }
 
@@ -101,11 +161,12 @@ function renderMap(){
   markerLayer.clearLayers();
   filtered().forEach(d=>{
     const r = 4 + Math.sqrt(d.deaths)*1.1;
+    const color = CATEGORY_META[d.category].color;
     const m = L.circleMarker([d.lat,d.lng], {
-      radius:r, color:CAUSE_COLORS[d.cause], weight:1.5,
-      fillColor:CAUSE_COLORS[d.cause], fillOpacity:0.55,
+      radius:r, color:color, weight:1.5,
+      fillColor:color, fillOpacity:0.55,
     });
-    m.bindPopup(`<b>${d.name}</b><br>${d.date} · ${d.state}<br>${CAUSE_LABELS[d.cause]} · ${d.deaths} deaths<br><span style="color:#4B463D">${d.note}</span>`);
+    m.bindPopup(`<b>${d.name}</b><br>${d.date} · ${d.state}<br>${CATEGORY_META[d.category].label} · ${CAUSE_LABELS[d.cause]} · ${d.deaths} deaths<br><span style="color:#4B463D">${d.note}</span>`);
     m.addTo(markerLayer);
   });
 }
@@ -140,14 +201,14 @@ function renderCauseChart(){
   const ctx = document.getElementById("causeChart");
   const data = filtered();
   const counts = {};
-  Object.keys(CAUSE_COLORS).forEach(c=>counts[c]=0);
-  data.forEach(d=>counts[d.cause]++);
+  Object.keys(CATEGORY_META).forEach(c=>counts[c]=0);
+  data.forEach(d=>counts[d.category]++);
   if(causeChart) causeChart.destroy();
   causeChart = new Chart(ctx, {
     type:"doughnut",
     data:{
-      labels: Object.keys(counts).map(c=>CAUSE_LABELS[c]),
-      datasets:[{ data:Object.values(counts), backgroundColor:Object.keys(counts).map(c=>CAUSE_COLORS[c]) }]
+      labels: Object.keys(counts).map(c=>CATEGORY_META[c].label),
+      datasets:[{ data:Object.values(counts), backgroundColor:Object.keys(counts).map(c=>CATEGORY_META[c].color) }]
     },
     options:{
       responsive:true,
@@ -170,18 +231,19 @@ function renderTable(){
       <td class="date-cell"><span class="expand-caret">${openSlug===d.slug?"▾":"▸"}</span>${d.date}</td>
       <td class="name-cell"><strong>${d.name}</strong><span class="note">${d.note}</span></td>
       <td>${d.state}</td>
+      <td><span class="cause-tag" style="background:${CATEGORY_META[d.category].color}">${CATEGORY_META[d.category].label}</span></td>
       <td><span class="cause-tag" style="background:${CAUSE_COLORS[d.cause]}">${CAUSE_LABELS[d.cause]}</span></td>
       <td class="deaths-cell">${d.deaths}</td>
     </tr>
     <tr class="detail-row ${openSlug===d.slug?"open":""}" data-slug-detail="${d.slug}">
-      <td colspan="5">
+      <td colspan="6">
         <div class="detail-inner">
           <div class="detail-text">
             <strong>${d.name}</strong> · ${d.date} · ${d.state}<br>
-            ${d.note} Cause category: ${CAUSE_LABELS[d.cause]}. Reported deaths: ${d.deaths}.
+            ${d.note} Category: ${CATEGORY_META[d.category].label}. Cause: ${CAUSE_LABELS[d.cause]}. Reported deaths: ${d.deaths}.
           </div>
           <div class="detail-actions">
-            ${d.wiki ? `<a href="${d.wiki}" target="_blank" rel="noopener">Wikipedia ↗</a>` : `<a href="https://en.wikipedia.org/wiki/List_of_railway_accidents_and_incidents_in_India" target="_blank" rel="noopener">Full list ↗</a>`}
+            ${d.wiki ? `<a href="${d.wiki}" target="_blank" rel="noopener">Wikipedia ↗</a>` : `<a href="https://en.wikipedia.org/wiki/Portal:Current_events" target="_blank" rel="noopener">Search sources ↗</a>`}
             <button class="copy-link" data-slug="${d.slug}">Copy link</button>
           </div>
         </div>
@@ -223,7 +285,13 @@ function openFromHash(){
   if(!incident) return;
   // reset filters so the incident is guaranteed visible
   activeCauses = new Set(Object.keys(CAUSE_COLORS));
-  document.querySelectorAll("#causeFilters .chip").forEach(c=>c.classList.add("active"));
+  activeCategories = new Set(Object.keys(CATEGORY_META));
+  document.querySelectorAll("#causeFilters .chip, #categoryFilters .chip").forEach(c=>{
+    c.classList.add("active");
+    const causeKey = c.dataset.cause, catKey = c.dataset.category;
+    if(causeKey){ c.style.background = CAUSE_COLORS[causeKey]; c.style.color = "#fff"; }
+    if(catKey){ c.style.background = CATEGORY_META[catKey].color; c.style.color = "#fff"; }
+  });
   yearMin = 1902; yearMax = 2025;
   yMinEl.value = 1902; yMaxEl.value = 2025;
   syncYearLabels();
@@ -268,6 +336,7 @@ function refreshAll(){
 
 // ---------- Init ----------
 renderBoard();
+renderCategoryChips();
 renderFilterChips();
 renderLegend();
 initMap();

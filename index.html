@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Signal Failure — A Record of Indian Railway Accidents</title>
+<title>The Ledger — A Record of Accidents & Attacks in India</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
@@ -251,13 +251,13 @@ footer .sources{font-family:var(--mono);font-size:0.76rem;color:var(--ink-soft);
     <div class="masthead-row">
       <div>
         <p class="kicker">A Public Data Record — Updated 2026</p>
-        <h1>Signal Failure</h1>
-        <p class="dek">An interactive record of train accidents on Indian Railways, 1902–2025 — collisions, derailments, fires and level-crossing incidents, mapped and sourced.</p>
+        <h1>The Ledger</h1>
+        <p class="dek">An interactive record of railway accidents, aviation disasters, terrorist attacks, and Naxalite/Maoist violence in India, 1902–2025 — mapped, categorised, and sourced.</p>
       </div>
       <div class="masthead-meta">
-        148,706 km of track<br>
-        13,000+ trains daily<br>
-        38,500+ accidents recorded, 1961–2019
+        4 categories tracked<br>
+        146 incidents recorded<br>
+        1902 – 2025
       </div>
     </div>
   </header>
@@ -268,12 +268,13 @@ footer .sources{font-family:var(--mono);font-size:0.76rem;color:var(--ink-soft);
 
   <section id="map-section">
     <div class="section-head">
-      <h2>Where accidents happened</h2>
-      <p>96 major documented accidents plotted by location. Marker size scales with fatalities; colour indicates cause. Search, filter by cause, or drag the year range below — click any row in the ledger for sources and a shareable link.</p>
+      <h2>Where it happened</h2>
+      <p>146 major documented incidents plotted by location, spanning four categories. Marker size scales with fatalities; colour indicates category. Toggle categories, search, or filter by cause — click any row in the ledger for sources and a shareable link.</p>
     </div>
     <div class="filters">
-      <input type="text" id="searchBox" placeholder="Search by train, place, or state…" autocomplete="off">
+      <input type="text" id="searchBox" placeholder="Search by name, place, or state…" autocomplete="off">
     </div>
+    <div class="filters" id="categoryFilters"></div>
     <div class="filters" id="causeFilters"></div>
     <div class="filters">
       <div class="range-wrap">
@@ -290,15 +291,15 @@ footer .sources{font-family:var(--mono);font-size:0.76rem;color:var(--ink-soft);
   <section id="charts-section">
     <div class="section-head">
       <h2>The long trend</h2>
-      <p>Official Ministry of Railways data on consequential train accidents by decade shows a sharp, sustained decline since the 1960s even as traffic has grown.</p>
+      <p>Official Ministry of Railways data on consequential train accidents by decade shows a sharp, sustained decline since the 1960s. The chart on the right shows how the currently filtered incidents split across all four categories.</p>
     </div>
     <div class="chart-grid">
       <div class="chart-box">
-        <h3>Consequential accidents per decade</h3>
+        <h3>Railway accidents per decade (official data)</h3>
         <canvas id="decadeChart" height="220"></canvas>
       </div>
       <div class="chart-box">
-        <h3>Cause breakdown, mapped incidents</h3>
+        <h3>Filtered incidents by category</h3>
         <canvas id="causeChart" height="220"></canvas>
       </div>
     </div>
@@ -316,6 +317,7 @@ footer .sources{font-family:var(--mono);font-size:0.76rem;color:var(--ink-soft);
             <th data-key="date">Date</th>
             <th data-key="name">Incident</th>
             <th data-key="state">State</th>
+            <th data-key="category">Category</th>
             <th data-key="cause">Cause</th>
             <th data-key="deaths" style="text-align:right;">Deaths</th>
           </tr>
@@ -329,8 +331,8 @@ footer .sources{font-family:var(--mono);font-size:0.76rem;color:var(--ink-soft);
     <div class="section-head">
       <h2>Sourcing &amp; methodology</h2>
     </div>
-    <p>Incident data compiled from Wikipedia's <em>List of railway accidents and incidents in India</em> and the Ministry of Railways' consequential-accident statistics (published via dataful.in and indiastat.com). Coordinates are approximated at the town or station level for mapping — not precise crash-site locations. Fatality figures vary across sources, particularly for pre-1980 incidents; the most commonly cited figure is used here. This dataset covers major documented accidents and is not exhaustive — the Ministry of Railways recorded 38,500+ accidents between 1961 and 2019 alone, the vast majority minor.</p>
-    <p class="sources">Sources: en.wikipedia.org/wiki/List_of_railway_accidents_and_incidents_in_India · dataful.in/datasets/1210 · indiastat.com</p>
+    <p>Incident data compiled from Wikipedia's lists of railway accidents, airliner accidents and incidents, and terrorist incidents in India, plus individual Wikipedia articles on major Naxalite/Maoist attacks. Railway decade statistics are from the Ministry of Railways (via dataful.in and indiastat.com). Coordinates are approximated at the town, station, or district level for mapping — not precise incident locations. Fatality figures vary across sources, particularly for older or contested incidents; the most commonly cited figure is used here. This dataset covers major documented incidents in each category and is not exhaustive.</p>
+    <p class="sources">Sources: en.wikipedia.org/wiki/List_of_railway_accidents_and_incidents_in_India · en.wikipedia.org/wiki/List_of_accidents_and_incidents_involving_airliners_in_India · en.wikipedia.org/wiki/List_of_terrorist_incidents_in_India · dataful.in/datasets/1210 · indiastat.com</p>
   </footer>
 </div>
 
