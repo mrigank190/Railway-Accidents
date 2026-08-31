@@ -20,10 +20,22 @@ const CAUSE_LABELS = {
 let activeCauses = new Set(Object.keys(CAUSE_COLORS));
 let yearMin = 1902, yearMax = 2025;
 let sortKey = "date", sortDir = -1;
+let searchQuery = "";
+let openSlug = null;
 
 function yearOf(d){ return parseInt(d.date.slice(0,4),10); }
+function matchesSearch(d, q){
+  if(!q) return true;
+  const hay = (d.name + " " + d.state + " " + d.note).toLowerCase();
+  return hay.includes(q);
+}
 function filtered(){
-  return INCIDENTS.filter(d => activeCauses.has(d.cause) && yearOf(d) >= yearMin && yearOf(d) <= yearMax);
+  const q = searchQuery.trim().toLowerCase();
+  return INCIDENTS.filter(d =>
+    activeCauses.has(d.cause) &&
+    yearOf(d) >= yearMin && yearOf(d) <= yearMax &&
+    matchesSearch(d, q)
+  );
 }
 
 // ---------- Departure board ----------
@@ -154,14 +166,76 @@ function renderTable(){
     return String(av).localeCompare(String(bv)) * sortDir;
   });
   body.innerHTML = rows.map(d=>`
-    <tr>
-      <td class="date-cell">${d.date}</td>
+    <tr class="incident-row" data-slug="${d.slug}">
+      <td class="date-cell"><span class="expand-caret">${openSlug===d.slug?"▾":"▸"}</span>${d.date}</td>
       <td class="name-cell"><strong>${d.name}</strong><span class="note">${d.note}</span></td>
       <td>${d.state}</td>
       <td><span class="cause-tag" style="background:${CAUSE_COLORS[d.cause]}">${CAUSE_LABELS[d.cause]}</span></td>
       <td class="deaths-cell">${d.deaths}</td>
     </tr>
+    <tr class="detail-row ${openSlug===d.slug?"open":""}" data-slug-detail="${d.slug}">
+      <td colspan="5">
+        <div class="detail-inner">
+          <div class="detail-text">
+            <strong>${d.name}</strong> · ${d.date} · ${d.state}<br>
+            ${d.note} Cause category: ${CAUSE_LABELS[d.cause]}. Reported deaths: ${d.deaths}.
+          </div>
+          <div class="detail-actions">
+            ${d.wiki ? `<a href="${d.wiki}" target="_blank" rel="noopener">Wikipedia ↗</a>` : `<a href="https://en.wikipedia.org/wiki/List_of_railway_accidents_and_incidents_in_India" target="_blank" rel="noopener">Full list ↗</a>`}
+            <button class="copy-link" data-slug="${d.slug}">Copy link</button>
+          </div>
+        </div>
+      </td>
+    </tr>
   `).join("");
+
+  body.querySelectorAll("tr.incident-row").forEach(tr=>{
+    tr.addEventListener("click", ()=>{
+      const slug = tr.dataset.slug;
+      openSlug = (openSlug === slug) ? null : slug;
+      history.replaceState(null, "", openSlug ? "#"+openSlug : location.pathname);
+      renderTable();
+    });
+  });
+  body.querySelectorAll(".copy-link").forEach(btn=>{
+    btn.addEventListener("click", (e)=>{
+      e.stopPropagation();
+      const slug = btn.dataset.slug;
+      const url = location.origin + location.pathname + "#" + slug;
+      navigator.clipboard?.writeText(url).catch(()=>{});
+      btn.textContent = "Copied ✓";
+      setTimeout(()=>{ btn.textContent = "Copy link"; }, 1500);
+    });
+  });
+}
+
+// ---------- Search ----------
+document.getElementById("searchBox").addEventListener("input", (e)=>{
+  searchQuery = e.target.value;
+  refreshAll();
+});
+
+// ---------- Deep link on load ----------
+function openFromHash(){
+  const slug = location.hash.replace("#","");
+  if(!slug) return;
+  const incident = INCIDENTS.find(d=>d.slug===slug);
+  if(!incident) return;
+  // reset filters so the incident is guaranteed visible
+  activeCauses = new Set(Object.keys(CAUSE_COLORS));
+  document.querySelectorAll("#causeFilters .chip").forEach(c=>c.classList.add("active"));
+  yearMin = 1902; yearMax = 2025;
+  yMinEl.value = 1902; yMaxEl.value = 2025;
+  syncYearLabels();
+  searchQuery = "";
+  document.getElementById("searchBox").value = "";
+  openSlug = slug;
+  refreshAll();
+  setTimeout(()=>{
+    document.getElementById("table-section").scrollIntoView({behavior:"smooth", block:"start"});
+    const row = document.querySelector(`tr.incident-row[data-slug="${slug}"]`);
+    if(row) row.classList.add("flash");
+  }, 150);
 }
 document.querySelectorAll("#ledgerTable thead th").forEach(th=>{
   th.addEventListener("click", ()=>{
@@ -199,3 +273,5 @@ renderLegend();
 initMap();
 renderDecadeChart();
 refreshAll();
+openFromHash();
+window.addEventListener("hashchange", openFromHash);

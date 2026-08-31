@@ -160,6 +160,15 @@ section:last-of-type{border-bottom:none;}
   margin-left:auto;
 }
 input[type="range"]{accent-color:var(--navy);}
+#searchBox{
+  width:100%;max-width:420px;
+  font-family:var(--sans);font-size:0.92rem;
+  padding:9px 14px;
+  border:1px solid var(--ink);border-radius:2px;
+  background:var(--paper-2);color:var(--ink);
+}
+#searchBox:focus{outline:2px solid var(--navy-soft);outline-offset:1px;}
+#searchBox::placeholder{color:var(--ink-soft);}
 
 /* ---------- Map ---------- */
 #map{
@@ -196,7 +205,27 @@ table.ledger thead th:hover{color:var(--ink);}
 table.ledger tbody td{
   padding:10px 10px;border-bottom:1px solid var(--line);vertical-align:top;
 }
-table.ledger tbody tr:hover{background:rgba(0,0,0,0.03);}
+table.ledger tbody tr.incident-row{cursor:pointer;}
+table.ledger tbody tr.incident-row:hover{background:rgba(0,0,0,0.03);}
+table.ledger tbody tr.incident-row.flash{animation:flash 1.4s ease;}
+@keyframes flash{ 0%{background:#e8d9a8;} 100%{background:transparent;} }
+tr.detail-row td{
+  background:var(--paper-2);
+  border-bottom:1px solid var(--line);
+  padding:16px 20px;
+}
+tr.detail-row{display:none;}
+tr.detail-row.open{display:table-row;}
+.detail-inner{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;align-items:flex-start;}
+.detail-text{max-width:60ch;font-size:0.92rem;}
+.detail-actions{display:flex;gap:10px;flex-shrink:0;}
+.detail-actions a, .detail-actions button{
+  font-family:var(--mono);font-size:0.74rem;padding:6px 12px;border:1px solid var(--ink);
+  border-radius:2px;background:transparent;color:var(--ink);cursor:pointer;text-decoration:none;
+  white-space:nowrap;
+}
+.detail-actions a:hover, .detail-actions button:hover{background:var(--ink);color:var(--paper);}
+.expand-caret{display:inline-block;width:14px;color:var(--ink-soft);font-family:var(--mono);}
 .date-cell{font-family:var(--mono);white-space:nowrap;color:var(--ink-soft);}
 .deaths-cell{font-family:var(--mono);font-weight:600;text-align:right;}
 .cause-tag{
@@ -240,7 +269,10 @@ footer .sources{font-family:var(--mono);font-size:0.76rem;color:var(--ink-soft);
   <section id="map-section">
     <div class="section-head">
       <h2>Where accidents happened</h2>
-      <p>51 major documented accidents plotted by location. Marker size scales with fatalities; colour indicates cause. Filter by decade or cause below.</p>
+      <p>96 major documented accidents plotted by location. Marker size scales with fatalities; colour indicates cause. Search, filter by cause, or drag the year range below — click any row in the ledger for sources and a shareable link.</p>
+    </div>
+    <div class="filters">
+      <input type="text" id="searchBox" placeholder="Search by train, place, or state…" autocomplete="off">
     </div>
     <div class="filters" id="causeFilters"></div>
     <div class="filters">
